@@ -279,23 +279,3 @@ void FCACHE::natural_spline(
       y2[ k ] = y2[ k ] * y2[ k + 1 ] + u[ k ];
    }
 }
-
-double our_function( const double & x ) {
-   return sin(x) * cos(x);
-}
-
-#define EPSILON 1e-4
-
-int main() {
-   FCACHE fcache;
-   
-   if ( fcache.build( our_function, "sin_times_cos", 0, 3.14159, 10 ) ) {
-      if ( !fcache.test( 100, EPSILON ) ) {
-         std::cerr << fcache.error_msg << std::endl;
-      } else {
-         fcache.write_c_table( "testout.h" );
-      }
-   } else {
-      std::cerr << fcache.error_msg << std::endl;
-   }
-}
