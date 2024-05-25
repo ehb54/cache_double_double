@@ -19,4 +19,29 @@ int main() {
    } else {
       std::cerr << fcache.error_msg << std::endl;
    }
+
+   if ( fcache.build( our_function
+                      , "sin_times_cos_explicit_grid"
+                      ,{
+                         0
+                         ,0.349066
+                         ,0.698131
+                         ,1.0472
+                         ,1.39626
+                         ,1.74533
+                         ,2.09439
+                         ,2.44346
+                         ,2.79252
+                         ,3.14159
+                       }
+                      ) ) {
+      if ( !fcache.test( 100, EPSILON ) ) {
+         std::cerr << fcache.error_msg << std::endl;
+      } else {
+         fcache.write_c_table( "sin_times_cos_explicit_grid.h" );
+      }
+   } else {
+      std::cerr << fcache.error_msg << std::endl;
+   }
+
 }

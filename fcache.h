@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <math.h>
 #include <vector>
+#include <algorithm>
 
 class FCACHE
 {
@@ -15,6 +16,12 @@ class FCACHE
    // ~FCACHE();
    std::string error_msg;
 
+   bool build(
+              double                          (*f)(const double &)
+              ,const std::string            & name
+              ,const std::vector < double > & grid
+              );
+   
    bool build(
               double               (*f)(const double &)
               ,const std::string & name

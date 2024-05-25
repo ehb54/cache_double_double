@@ -12,26 +12,53 @@ bool FCACHE::build(
                    ,unsigned int        points
                    ) {
 
-   this->f = f;
-   this->name = name;
-   
-   if ( points < 2 ) {
-      error_msg = "build() requires 2 points";
-      return false;
-   }
    if ( x_min >= x_max ) {
       error_msg = "build() x_min must be less than x_max";
       return false;
    }
 
-   x_v.clear();
-   y_v.clear();
-   y2_v.clear();
+   std::vector < double > grid;
 
    double delta_x = ( x_max - x_min ) / ( (double) points - 1 );
 
    for ( double x = x_min; x <= x_max; x += delta_x ) {
-      x_v.push_back( x );
+      grid.push_back( x );
+      std::cout << "," << x << std::endl;
+   }
+   
+   return build( f, name, grid );
+}
+
+bool FCACHE::build(
+                   double                          (*f)(const double &)
+                   ,const std::string            & name
+                   ,const std::vector < double > & grid
+                   ) {
+
+   this->f = f;
+   this->name = name;
+   
+   if ( grid.size() < 2 ) {
+      error_msg = "build() requires 2 points";
+      return false;
+   }
+
+   x_v = grid;
+
+   std::sort( x_v.begin(), x_v.end() );
+   
+   double x_min = x_v.front();
+   double x_max = x_v.back();
+   
+   if ( x_min >= x_max ) {
+      error_msg = "build() x_min must be less than x_max";
+      return false;
+   }
+
+   y_v.clear();
+   y2_v.clear();
+
+   for ( auto const & x : x_v ) {
       y_v.push_back( (*f)( x ) );
    }
 
@@ -43,6 +70,7 @@ bool FCACHE::compare(
                      const double & x
                      ,double & diff
                      ) {
+
    if ( !f ) {
       error_msg = "no f defined";
       return false;
