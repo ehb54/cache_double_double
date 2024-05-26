@@ -9,12 +9,13 @@ std::vector < double > FCACHE::uniform_grid(
                                             ,double              x_max
                                             ,unsigned int        points
                                             ) {
-
+#define ROUNDING_TOLERANCE 1e-6
+   
    std::vector < double > grid;
 
    double delta_x = ( x_max - x_min ) / ( (double) points - 1 );
 
-   for ( double x = x_min; x <= x_max; x += delta_x ) {
+   for ( double x = x_min; x <= x_max + ROUNDING_TOLERANCE; x += delta_x ) {
       grid.push_back( x );
    }
 
@@ -109,14 +110,14 @@ bool FCACHE::time(
 }
 
 bool FCACHE::time(
-                  const std::vector < double >  & x_v
+                  const std::vector < double >  & grid
                   ) {
    if ( !f ) {
       error_msg = "no f defined";
       return false;
    }
 
-   if ( x_v.size() < 2 ) {
+   if ( grid.size() < 2 ) {
       error_msg = "test() requires 2 points";
       return false;
    }
@@ -129,14 +130,14 @@ bool FCACHE::time(
 
       clock_t start_time = clock();
 
-      for ( auto const & x : x_v ) {
+      for ( auto const & x : grid ) {
          result += f(x);
       }
          
       clock_t used_time = clock() - start_time;
 
       // force result in output to prevent optimizing compiler from bypassing
-      printf( "compute via f: %gms (%d)\n", used_time * 1e3 / CLOCKS_PER_SEC, (int)result );
+      printf( "compute via f: %.2fms (%d)\n", used_time * 1e3 / CLOCKS_PER_SEC, (int)result );
    }
    
    // compute via spline
@@ -148,7 +149,7 @@ bool FCACHE::time(
 
       clock_t start_time = clock();
 
-      for ( auto const & x : x_v ) {
+      for ( auto const & x : grid ) {
          apply_natural_spline( x, fx );
          result += fx; 
       }
@@ -156,7 +157,25 @@ bool FCACHE::time(
       clock_t used_time = clock() - start_time;
 
       // force result in output to prevent optimizing compiler from bypassing
-      printf( "compute via f: %gms (%d)\n", used_time * 1e3 / CLOCKS_PER_SEC, (int)result );
+      printf( "compute via apply_natural_spline (%lu grid points): %.2fms (%d)\n", x_v.size(), used_time * 1e3 / CLOCKS_PER_SEC, (int)result );
+   }
+   
+   // compute via fast_natural_spline
+   {
+
+      // require some result to prevent optimizing compiler from bypassing
+      double result = 0;
+
+      clock_t start_time = clock();
+
+      for ( auto const & x : grid ) {
+         result +=  fast_natural_spline( x );
+      }
+         
+      clock_t used_time = clock() - start_time;
+
+      // force result in output to prevent optimizing compiler from bypassing
+      printf( "compute via fast_natural_spline (%lu grid points): %.2fms (%d)\n", x_v.size(), used_time * 1e3 / CLOCKS_PER_SEC, (int)result );
    }
    
    return true;
@@ -184,7 +203,7 @@ bool FCACHE::test(
 }
 
 bool FCACHE::test(
-                  const std::vector < double >  & x_v
+                  const std::vector < double >  & grid
                   ,double             epsilon
                   ) {
    if ( !f ) {
@@ -192,13 +211,13 @@ bool FCACHE::test(
       return false;
    }
 
-   if ( x_v.size() < 2 ) {
+   if ( grid.size() < 2 ) {
       error_msg = "test() requires 2 points";
       return false;
    }
 
    double diff;
-   for ( auto const & x : x_v ) {
+   for ( auto const & x : grid ) {
       if ( !compare( x, diff ) ) {
          return false;
       }
@@ -272,6 +291,36 @@ bool FCACHE::apply_natural_spline(
                          ( b * b * b - b ) * y2_v[ khi ] ) * ( h * h ) / 6e0;
 
    return true;
+}
+
+double FCACHE::fast_natural_spline( const double & x ) {
+   // no bounds checking, could crash
+   
+   static double one_over_six = 1e0/6e0;
+   
+   unsigned int klo = 0;
+   unsigned int khi = x_v.size() - 1;
+
+   while ( khi - klo > 1 ) {
+      unsigned int k = ( khi + klo ) >> 1;
+      if ( x_v[ k ] > x ) {
+         khi = k;
+      } else {
+         klo = k;
+      }
+   }
+
+   double h = x_v[ khi ] - x_v[ klo ];
+   double one_over_h = 1e0 / h;
+
+   double a = ( x_v[ khi ] - x ) * one_over_h;
+   double b = ( x - x_v[ klo ] ) * one_over_h;
+
+   return
+      a * y_v[ klo ] +
+      b * y_v[ khi ] + ( ( a * a * a - a ) * y2_v[ klo ] + 
+                         ( b * b * b - b ) * y2_v[ khi ] ) * ( h * h ) * one_over_six;
+
 }
 
 bool FCACHE::write_c_table( std::string fname ) {

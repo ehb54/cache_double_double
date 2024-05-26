@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <time.h>
+#include <values.h>
 
 class FCACHE
 {
@@ -46,6 +47,8 @@ class FCACHE
                              ,double                       & y
                              );
 
+   double fast_natural_spline( const double & x );
+
    bool test(
              const std::vector < double >  & x_v
              ,double             epsilon
@@ -64,7 +67,7 @@ class FCACHE
 
    bool time( unsigned int points );
    bool time( const std::vector < double >  & x_v );
-
+   
  private:
 
    double                   (*f)(const double &);
