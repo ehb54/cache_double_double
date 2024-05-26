@@ -4,6 +4,23 @@ FCACHE::FCACHE() {
    f = 0;
 }
 
+std::vector < double > FCACHE::uniform_grid(
+                                            double              x_min
+                                            ,double              x_max
+                                            ,unsigned int        points
+                                            ) {
+
+   std::vector < double > grid;
+
+   double delta_x = ( x_max - x_min ) / ( (double) points - 1 );
+
+   for ( double x = x_min; x <= x_max; x += delta_x ) {
+      grid.push_back( x );
+   }
+
+   return grid;
+}
+
 bool FCACHE::build(
                    double               (*f)(const double &)
                    ,const std::string & name
@@ -17,16 +34,7 @@ bool FCACHE::build(
       return false;
    }
 
-   std::vector < double > grid;
-
-   double delta_x = ( x_max - x_min ) / ( (double) points - 1 );
-
-   for ( double x = x_min; x <= x_max; x += delta_x ) {
-      grid.push_back( x );
-      std::cout << "," << x << std::endl;
-   }
-   
-   return build( f, name, grid );
+   return build( f, name, uniform_grid( x_min, x_max, points ) );
 }
 
 bool FCACHE::build(
@@ -86,6 +94,74 @@ bool FCACHE::compare(
    return true;
 }
 
+bool FCACHE::time(
+                  unsigned int        points
+                  ) {
+   if ( !f ) {
+      error_msg = "no f defined";
+      return false;
+   }
+
+   double x_min   = x_v.front();
+   double x_max   = x_v.back();
+   
+   return time( uniform_grid( x_v.front(), x_v.back(), points ) );
+}
+
+bool FCACHE::time(
+                  const std::vector < double >  & x_v
+                  ) {
+   if ( !f ) {
+      error_msg = "no f defined";
+      return false;
+   }
+
+   if ( x_v.size() < 2 ) {
+      error_msg = "test() requires 2 points";
+      return false;
+   }
+
+   // compute via f
+   {
+
+      // require some result to prevent optimizing compiler from bypassing
+      double result = 0;
+
+      clock_t start_time = clock();
+
+      for ( auto const & x : x_v ) {
+         result += f(x);
+      }
+         
+      clock_t used_time = clock() - start_time;
+
+      // force result in output to prevent optimizing compiler from bypassing
+      printf( "compute via f: %gms (%d)\n", used_time * 1e3 / CLOCKS_PER_SEC, (int)result );
+   }
+   
+   // compute via spline
+   {
+
+      // require some result to prevent optimizing compiler from bypassing
+      double result = 0;
+      double fx;
+
+      clock_t start_time = clock();
+
+      for ( auto const & x : x_v ) {
+         apply_natural_spline( x, fx );
+         result += fx; 
+      }
+         
+      clock_t used_time = clock() - start_time;
+
+      // force result in output to prevent optimizing compiler from bypassing
+      printf( "compute via f: %gms (%d)\n", used_time * 1e3 / CLOCKS_PER_SEC, (int)result );
+   }
+   
+   return true;
+}
+
 bool FCACHE::test(
                   unsigned int        points
                   ,double             epsilon
@@ -103,15 +179,26 @@ bool FCACHE::test(
    double x_min   = x_v.front();
    double x_max   = x_v.back();
    
-   if ( x_min >= x_max ) {
-      error_msg = "test() x_min must be less than x_max";
+   std::vector < double > grid = uniform_grid( x_v.front(), x_v.back(), points );
+   return test( grid, epsilon );
+}
+
+bool FCACHE::test(
+                  const std::vector < double >  & x_v
+                  ,double             epsilon
+                  ) {
+   if ( !f ) {
+      error_msg = "no f defined";
       return false;
    }
 
-   double delta_x = ( x_max - x_min ) / ( (double) points - 1 );
+   if ( x_v.size() < 2 ) {
+      error_msg = "test() requires 2 points";
+      return false;
+   }
 
    double diff;
-   for ( double x = x_min; x <= x_max; x += delta_x ) {
+   for ( auto const & x : x_v ) {
       if ( !compare( x, diff ) ) {
          return false;
       }

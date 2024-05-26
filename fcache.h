@@ -7,6 +7,7 @@
 #include <math.h>
 #include <vector>
 #include <algorithm>
+#include <time.h>
 
 class FCACHE
 {
@@ -46,9 +47,23 @@ class FCACHE
                              );
 
    bool test(
+             const std::vector < double >  & x_v
+             ,double             epsilon
+             );
+
+   bool test(
              unsigned int        points
              ,double             epsilon
              );
+
+   std::vector < double > uniform_grid(
+                                       double              x_min
+                                       ,double              x_max
+                                       ,unsigned int        points
+                                       );
+
+   bool time( unsigned int points );
+   bool time( const std::vector < double >  & x_v );
 
  private:
 

@@ -10,7 +10,7 @@ double our_function( const double & x ) {
 int main() {
    FCACHE fcache;
    
-   if ( fcache.build( our_function, "sin_times_cos", 0, 3.14159, 10 ) ) {
+   if ( fcache.build( our_function, "sin_times_cos", 0, 3.14159, 50000 ) ) {
       if ( !fcache.test( 100, EPSILON ) ) {
          std::cerr << fcache.error_msg << std::endl;
       } else {
@@ -44,4 +44,5 @@ int main() {
       std::cerr << fcache.error_msg << std::endl;
    }
 
+   fcache.time( 100000 );
 }
